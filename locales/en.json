@@ -207,14 +207,14 @@
       "title": "Preview deploy"
     },
     "desc_highlight": "Expect some bugs and missing features here and there.",
-    "desc_para1": "Elk is a nimble Mastodon web client. You can login to your Mastodon account and use it to interact with the fediverse.",
+    "desc_para1": "Omedia Social is a Mastodon web client for the Omedia team. Log in to your account and use it to interact with the fediverse.",
     "desc_para2": "Elk is Open Source and we're actively improving it as a community project. Join us and let's build it together!",
     "desc_para3": "To boost development, you can sponsor the Team through GitHub Sponsors. We hope you enjoy Elk!",
     "desc_para4": "If you'd like to report a bug, help us testing, give feedback, or contribute,",
     "desc_para5": "reach out to us on GitHub",
     "desc_para6": "and get involved.",
     "footer_team": "The Elk Team",
-    "title": "Welcome to Elk!"
+    "title": "Welcome to Omedia Social!"
   },
   "language": {
     "search": "Search"

@@ -199,14 +199,14 @@
       "title": "Preview versie"
     },
     "desc_highlight": "Je kunt hier en daar wat bugs of ontbrekende features verwachten.",
-    "desc_para1": "Bedankt voor je interesse in het uitproberen van Elk, onze Mastodon web client in-wording!",
+    "desc_para1": "Omedia Social is een Mastodon web client voor het Omedia-team. Log in op je account en gebruik het om te communiceren met de fediverse.",
     "desc_para2": "we werken hard aan nieuwe ontwikkelingen en verbeteringen in de loop van de tijd.",
     "desc_para3": "Om de ontwikkelingen te versnellen, kun je het Team sponsoren via GitHub Sponsors. We hopen dat Elk je bevalt!",
     "desc_para4": "Elk is Open Source. Wil je meehelpen met testen, feedback of bijdragen,",
     "desc_para5": "zoek ons op via GitHub",
     "desc_para6": "en doe met ons mee.",
     "footer_team": "Het Elk Team",
-    "title": "Elk is in Preview!"
+    "title": "Welkom bij Omedia Social!"
   },
   "language": {
     "search": "Opzoeken"
