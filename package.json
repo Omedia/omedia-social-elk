@@ -1,10 +1,10 @@
 {
-  "name": "@elk-zone/elk",
+  "name": "@omedia/omedia-social",
   "type": "module",
   "version": "1.0.0",
   "packageManager": "pnpm@11.5.2",
   "license": "MIT",
-  "homepage": "https://elk.zone/",
+  "homepage": "https://omedia.social/",
   "main": "./nuxt.config.ts",
   "scripts": {
     "build": "nuxt build",

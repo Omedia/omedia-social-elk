@@ -30,14 +30,6 @@ const status = computed(() => {
           {{ status }}
         </div>
         <SettingsLanguage select-settings />
-        <NuxtLink
-          href="https://docs.elk.zone/guide/contributing"
-          target="_blank"
-          hover:underline text-primary inline-flex items-center gap-1
-        >
-          <span inline-block i-ri:information-line />
-          {{ $t('settings.language.how_to_contribute') }}
-        </NuxtLink>
       </section>
       <section mt4>
         <h2 font-bold text-xl flex="~ gap-1" items-center>
