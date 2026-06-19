@@ -1,5 +1,4 @@
 <script setup lang="ts">
-const { env } = useBuildInfo()
 const router = useRouter()
 const back = ref<any>('')
 
@@ -28,9 +27,11 @@ router.afterEach(() => {
       to="/home"
       @click.prevent="onClickLogo"
     >
-      <NavLogo shrink-0 aspect="1/1" sm:h-8 xl:h-10 class="rtl-flip" />
+      <span shrink-0 aspect="1/1" sm:h-8 xl:h-10 sm:w-8 xl:w-10 class="rtl-flip">
+        <NavOmediaIcon w-full h-full />
+      </span>
       <div v-show="isHydrated" hidden xl:block text-secondary>
-        {{ $t('app_name') }} <sup v-if="env !== 'release'" text-sm italic mt-1>{{ env }}</sup>
+        {{ $t('app_name') }}
       </div>
     </NuxtLink>
     <div hidden xl:flex items-center me-6 mt-2 gap-1>

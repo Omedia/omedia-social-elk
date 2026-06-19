@@ -174,9 +174,9 @@ export default defineNuxtConfig({
       // We use LibreTranslate (https://github.com/LibreTranslate/LibreTranslate) as
       // our default translation server #76
       translateApi: '',
-      // Use the instance where Elk has its Mastodon account as the default
-      defaultServer: 'm.webtoo.ls',
-      singleInstance: false,
+      defaultServer: 'omedia.social',
+      singleInstance: true,
+      giphyApiKey: '',
     },
     storage: {
       fsBase: 'node_modules/.cache/app',
@@ -322,7 +322,7 @@ export default defineNuxtConfig({
     },
     rateLimiter: false,
   },
-  colorMode: { classSuffix: '' },
+  colorMode: { classSuffix: '', preference: 'light', fallback: 'light' },
   i18n: {
     locales: currentLocales,
     strategy: 'no_prefix',
