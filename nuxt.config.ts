@@ -174,7 +174,10 @@ export default defineNuxtConfig({
       // We use LibreTranslate (https://github.com/LibreTranslate/LibreTranslate) as
       // our default translation server #76
       translateApi: '',
-      defaultServer: 'omedia.social',
+      // The Mastodon backend lives on web_domain mastodon.omedia.social
+      // (omedia.social serves this Elk app). Overridable at runtime via
+      // NUXT_PUBLIC_DEFAULT_SERVER once the homepage is no longer prerendered.
+      defaultServer: 'mastodon.omedia.social',
       singleInstance: true,
       giphyApiKey: '',
     },
@@ -183,8 +186,10 @@ export default defineNuxtConfig({
     },
   },
   routeRules: {
-    // Static generation
-    '/': { prerender: true },
+    // '/' is SSR (not prerendered) so runtime NUXT_PUBLIC_* (defaultServer,
+    // giphyApiKey, …) is honored. Prerendering baked build-time config into the
+    // static homepage and ignored the container env.
+    '/': { prerender: false },
     '/settings/**': { prerender: false },
     // incremental regeneration
     '/api/list-servers': { swr: true },
@@ -206,7 +211,9 @@ export default defineNuxtConfig({
       },
     },
     prerender: {
-      crawlLinks: true,
+      // Don't crawl/prerender from '/': it bakes build-time runtimeConfig into
+      // static pages and defeats runtime env configuration.
+      crawlLinks: false,
     },
     publicAssets: [
       {
