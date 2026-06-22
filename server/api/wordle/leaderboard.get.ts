@@ -1,0 +1,115 @@
+import type { WordleResult } from '../../utils/wordle'
+import { getAllResults, getResultsForPuzzle } from '../../utils/wordle'
+
+export interface TodayEntry {
+  acct: string
+  displayName: string
+  avatar: string
+  status: 'won' | 'lost'
+  guesses: number
+}
+
+export interface AllTimeEntry {
+  acct: string
+  displayName: string
+  avatar: string
+  played: number
+  won: number
+  winRate: number
+  avgGuesses: number | null
+  currentStreak: number
+  maxStreak: number
+}
+
+function buildToday(results: WordleResult[]): TodayEntry[] {
+  return results
+    .map(r => ({
+      acct: r.acct,
+      displayName: r.displayName,
+      avatar: r.avatar,
+      status: r.status,
+      guesses: r.guesses,
+    }))
+    .sort((a, b) => {
+      // Winners first, fewest guesses first; losers after.
+      if (a.status !== b.status)
+        return a.status === 'won' ? -1 : 1
+      if (a.status === 'won')
+        return a.guesses - b.guesses
+      return 0
+    })
+}
+
+function buildAllTime(results: WordleResult[]): AllTimeEntry[] {
+  const byUser = new Map<string, WordleResult[]>()
+  for (const r of results) {
+    const list = byUser.get(r.acct) ?? []
+    list.push(r)
+    byUser.set(r.acct, list)
+  }
+
+  const entries: AllTimeEntry[] = []
+  for (const [acct, list] of byUser) {
+    list.sort((a, b) => a.puzzleNumber - b.puzzleNumber)
+    const latest = list.at(-1)
+    if (!latest)
+      continue
+
+    const played = list.length
+    const wins = list.filter(r => r.status === 'won')
+    const won = wins.length
+    const totalWinGuesses = wins.reduce((sum, r) => sum + r.guesses, 0)
+
+    // Streaks over consecutive puzzle numbers; a gap or a loss breaks the run.
+    let currentStreak = 0
+    let maxStreak = 0
+    let prevPuzzle: number | null = null
+    for (const r of list) {
+      const consecutive = prevPuzzle !== null && r.puzzleNumber === prevPuzzle + 1
+      if (r.status === 'won')
+        currentStreak = consecutive ? currentStreak + 1 : 1
+      else
+        currentStreak = 0
+      if (currentStreak > maxStreak)
+        maxStreak = currentStreak
+      prevPuzzle = r.puzzleNumber
+    }
+
+    entries.push({
+      acct,
+      displayName: latest.displayName,
+      avatar: latest.avatar,
+      played,
+      won,
+      winRate: played ? Math.round((won / played) * 100) : 0,
+      avgGuesses: won ? Math.round((totalWinGuesses / won) * 10) / 10 : null,
+      currentStreak,
+      maxStreak,
+    })
+  }
+
+  return entries.sort((a, b) => {
+    if (b.won !== a.won)
+      return b.won - a.won
+    if (b.winRate !== a.winRate)
+      return b.winRate - a.winRate
+    const ag = a.avgGuesses ?? Number.POSITIVE_INFINITY
+    const bg = b.avgGuesses ?? Number.POSITIVE_INFINITY
+    return ag - bg
+  })
+}
+
+export default defineEventHandler(async (event) => {
+  const query = getQuery(event)
+  const puzzleNumber = Number(query.puzzle)
+
+  const [todayResults, allResults] = await Promise.all([
+    Number.isInteger(puzzleNumber) ? getResultsForPuzzle(puzzleNumber) : Promise.resolve([]),
+    getAllResults(),
+  ])
+
+  return {
+    today: buildToday(todayResults),
+    allTime: buildAllTime(allResults),
+  }
+})
