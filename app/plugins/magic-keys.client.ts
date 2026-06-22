@@ -11,9 +11,14 @@ export default defineNuxtPlugin(({ $scrollToTop }) => {
 
   // disable shortcuts when focused on inputs (https://vueuse.org/core/usemagickeys/#conditionally-disable)
   const activeElement = useActiveElement()
+  const route = useRoute()
+
+  // Routes that own the keyboard entirely (games etc.) — block all Elk shortcuts on them.
+  const shortcutsDisabled = computed(() => route.path === '/wordle')
 
   const notUsingInput = computed(() =>
-    activeElement.value?.tagName !== 'INPUT'
+    !shortcutsDisabled.value
+    && activeElement.value?.tagName !== 'INPUT'
     && activeElement.value?.tagName !== 'TEXTAREA'
     && !activeElement.value?.isContentEditable,
   )
