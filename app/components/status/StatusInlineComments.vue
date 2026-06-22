@@ -42,8 +42,10 @@ async function loadReplies() {
   loading.value = true
   try {
     const context = await client.value.v1.statuses.$select(props.status.id).context.fetch()
-    // Direct replies only (excludes nested ones)
-    replies.value = (context.descendants || []).filter(r => r.inReplyToId === props.status.id)
+    // Direct replies only (excludes nested ones), oldest first so the thread reads chronologically
+    replies.value = (context.descendants || [])
+      .filter(r => r.inReplyToId === props.status.id)
+      .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     loaded.value = true
   }
   catch (e) {

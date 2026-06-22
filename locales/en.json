@@ -380,14 +380,14 @@
   "pwa": {
     "dismiss": "Dismiss",
     "install": "Install",
-    "install_title": "Install Elk",
+    "install_title": "Install Omedia Social",
     "screenshots": {
-      "dark": "Screenshot of Elk running in dark mode",
-      "light": "Screenshot of Elk running in light mode"
+      "dark": "Screenshot of Omedia Social running in dark mode",
+      "light": "Screenshot of Omedia Social running in light mode"
     },
-    "title": "New Elk update available!",
+    "title": "New Omedia Social update available!",
     "update": "Update",
-    "update_available_short": "Update Elk",
+    "update_available_short": "Update Omedia Social",
     "webmanifest": {
       "canary": {
         "description": "A nimble Mastodon web client (canary)",
@@ -405,9 +405,9 @@
         "short_name": "Elk (preview)"
       },
       "release": {
-        "description": "A nimble Mastodon web client",
-        "name": "Elk",
-        "short_name": "Elk"
+        "description": "A Mastodon web client for the Omedia team",
+        "name": "Omedia Social",
+        "short_name": "Omedia Social"
       }
     }
   },
@@ -516,7 +516,7 @@
           "reblog": "Reposts",
           "title": "What notifications to receive?"
         },
-        "description": "Receive notifications even when you are not using Elk.",
+        "description": "Receive notifications even when you are not using Omedia Social.",
         "instructions": "Don't forget to save your changes using @:settings.notifications.push_notifications.save_settings button!",
         "label": "Push notifications settings",
         "policy": {
@@ -533,9 +533,9 @@
           "invalid_vapid_key": "The VAPID public key seems to be invalid.",
           "permission_denied": "Permission denied: enable notifications in your browser.",
           "repo_link": "Elk's repository in GitHub",
-          "request_error": "An error occurred while requesting the subscription, try again and if the error persists, please report the issue to the Elk repository.",
+          "request_error": "An error occurred while requesting the subscription, try again and if the error persists, please contact your administrator.",
           "title": "Could not subscribe to push notifications",
-          "too_many_registrations": "Due to browser limitations, Elk cannot use the push notifications service for multiple accounts on different servers. You should unsubscribe from push notifications on another account and try again.",
+          "too_many_registrations": "Due to browser limitations, Omedia Social cannot use the push notifications service for multiple accounts on different servers. You should unsubscribe from push notifications on another account and try again.",
           "vapid_not_supported": "Your browser supports Web Push Notifications, but does not seem to implement the VAPID protocol."
         },
         "title": "Push notifications settings",
@@ -544,10 +544,10 @@
         "unsupported": "Your browser does not support push notifications.",
         "warning": {
           "enable_close": "Close",
-          "enable_description": "To receive notifications when Elk is not open, enable push notifications. You can control precisely what types of interactions generate push notifications via the \"@:settings.notifications.show_btn{'\"'} button above once enabled.",
-          "enable_description_desktop": "To receive notifications when Elk is not open, enable push notifications. You can control precisely what types of interactions generate push notifications in \"Settings > Notifications > Push notifications settings\" once enabled.",
+          "enable_description": "To receive notifications when Omedia Social is not open, enable push notifications. You can control precisely what types of interactions generate push notifications via the \"@:settings.notifications.show_btn{'\"'} button above once enabled.",
+          "enable_description_desktop": "To receive notifications when Omedia Social is not open, enable push notifications. You can control precisely what types of interactions generate push notifications in \"Settings > Notifications > Push notifications settings\" once enabled.",
           "enable_description_mobile": "You can also access the settings using the navigation menu \"Settings > Notifications > Push notification settings\".",
-          "enable_description_settings": "To receive notifications when Elk is not open, enable push notifications. You will be able to control precisely what types of interactions generate push notifications on this same screen once you enable them.",
+          "enable_description_settings": "To receive notifications when Omedia Social is not open, enable push notifications. You will be able to control precisely what types of interactions generate push notifications on this same screen once you enable them.",
           "enable_desktop": "Enable push notifications",
           "enable_title": "Never miss anything",
           "re_auth": "It seems that your server does not support push notifications. Try sign out and sign in again, if this message still appears contact your server administrator."
@@ -626,9 +626,9 @@
     }
   },
   "share_target": {
-    "description": "Elk can be configured so that you can share content from other applications, simply install Elk on your device or computer and sign in.",
-    "hint": "In order to share content with Elk, Elk must be installed and you must be signed in.",
-    "title": "Share with Elk"
+    "description": "Omedia Social can be configured so that you can share content from other applications, simply install Omedia Social on your device or computer and sign in.",
+    "hint": "In order to share content with Omedia Social, Omedia Social must be installed and you must be signed in.",
+    "title": "Share with Omedia Social"
   },
   "state": {
     "attachments_exceed_server_limit": "The number of attachments exceeded the limit per post.",
