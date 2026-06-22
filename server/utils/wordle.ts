@@ -1,5 +1,5 @@
 // @ts-expect-error virtual import
-import { driver } from '#storage-config'
+import { driver as buildDriver } from '#storage-config'
 
 import kv from 'unstorage/drivers/cloudflare-kv-http'
 import fs from 'unstorage/drivers/fs'
@@ -17,36 +17,59 @@ export interface WordleResult {
 }
 
 const storage = useStorage<WordleResult>()
+let storageMounted = false
+const TRAILING_SLASH_RE = /\/$/
 
-if (driver === 'fs') {
-  const config = useRuntimeConfig()
-  storage.mount('wordle', fs({ base: `${config.storage.fsBase}-wordle` }))
+/** Runtime env wins over the driver baked in at build time (CI often sets cloudflare). */
+function activeDriver() {
+  return process.env.NUXT_STORAGE_DRIVER || buildDriver
 }
-else if (driver === 'cloudflare') {
-  const config = useRuntimeConfig()
-  storage.mount('wordle', kv({
-    accountId: config.cloudflare.accountId,
-    namespaceId: config.cloudflare.namespaceId,
-    apiToken: config.cloudflare.apiToken,
-  }))
+
+function wordleStorageBase(fsBase: string) {
+  // Inside the main volume (e.g. /elk/data/wordle), not a sibling like /elk/data-wordle.
+  return `${fsBase.replace(TRAILING_SLASH_RE, '')}/wordle`
 }
-else if (driver === 'vercel') {
+
+function ensureWordleStorage() {
+  if (storageMounted)
+    return
+
+  const driver = activeDriver()
   const config = useRuntimeConfig()
-  storage.mount('wordle', vercelKVDriver({
-    url: config.vercel.url,
-    token: config.vercel.token,
-    env: config.vercel.env,
-    base: config.vercel.base,
-  }))
-}
-else if (driver === 'memory') {
-  storage.mount('wordle', memory())
+
+  if (driver === 'fs') {
+    storage.mount('wordle', fs({ base: wordleStorageBase(config.storage.fsBase) }))
+  }
+  else if (driver === 'cloudflare') {
+    storage.mount('wordle', kv({
+      accountId: config.cloudflare.accountId,
+      namespaceId: config.cloudflare.namespaceId,
+      apiToken: config.cloudflare.apiToken,
+    }))
+  }
+  else if (driver === 'vercel') {
+    storage.mount('wordle', vercelKVDriver({
+      url: config.vercel.url,
+      token: config.vercel.token,
+      env: config.vercel.env,
+      base: config.vercel.base,
+    }))
+  }
+  else if (driver === 'memory') {
+    storage.mount('wordle', memory())
+  }
+  else {
+    storage.mount('wordle', fs({ base: wordleStorageBase(config.storage.fsBase) }))
+  }
+
+  storageMounted = true
 }
 
 const RESULT_PREFIX = 'wordle:result:'
 
 function resultKey(puzzleNumber: number, acct: string) {
-  return `${RESULT_PREFIX}${puzzleNumber}:${acct}`
+  // Encode acct so @ and other chars are safe as a filesystem path segment.
+  return `${RESULT_PREFIX}${puzzleNumber}:${encodeURIComponent(acct)}`
 }
 
 async function readKeys(keys: string[]) {
@@ -60,6 +83,7 @@ async function readKeys(keys: string[]) {
  * Returns true when a new record was written.
  */
 export async function recordResult(entry: WordleResult): Promise<boolean> {
+  ensureWordleStorage()
   const key = resultKey(entry.puzzleNumber, entry.acct)
   if (await storage.hasItem(key))
     return false
@@ -68,11 +92,13 @@ export async function recordResult(entry: WordleResult): Promise<boolean> {
 }
 
 export async function getResultsForPuzzle(puzzleNumber: number): Promise<WordleResult[]> {
+  ensureWordleStorage()
   const keys = await storage.getKeys(`${RESULT_PREFIX}${puzzleNumber}:`)
   return readKeys(keys)
 }
 
 export async function getAllResults(): Promise<WordleResult[]> {
+  ensureWordleStorage()
   const keys = await storage.getKeys(RESULT_PREFIX)
   return readKeys(keys)
 }

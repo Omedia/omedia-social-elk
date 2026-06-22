@@ -111,12 +111,16 @@ function showFlash(msg: string) {
 }
 
 // Submit the finished game to the team leaderboard, once per puzzle.
-// No-op for guests or while still playing; retries on next mount if it fails.
+// No-op for guests or while still playing; retries when the user signs in.
 async function maybeSubmitScore() {
   const finalStatus = status.value
   const acct = currentUser.value?.account?.acct
-  if (typeof window === 'undefined' || finalStatus === 'playing' || !acct)
+  if (typeof window === 'undefined' || finalStatus === 'playing')
     return
+  if (!acct) {
+    showFlash('Sign in to submit your score to the leaderboard')
+    return
+  }
   const key = `${SUBMITTED_KEY_PREFIX}${puzzleNumber.value}:${acct}`
   if (localStorage.getItem(key))
     return
@@ -127,6 +131,8 @@ async function maybeSubmitScore() {
   })
   if (ok)
     localStorage.setItem(key, '1')
+  else
+    showFlash('Could not submit score — try again')
 }
 
 function commit() {
@@ -216,6 +222,11 @@ onMounted(() => {
 
 watch(() => currentUser.value?.account?.acct, () => {
   maybeSubmitScore()
+})
+
+watch(status, (s) => {
+  if (s !== 'playing')
+    maybeSubmitScore()
 })
 
 onBeforeUnmount(() => {

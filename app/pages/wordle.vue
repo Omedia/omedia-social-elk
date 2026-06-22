@@ -2,6 +2,12 @@
 useHydratedHead({ title: () => 'Wordle' })
 
 const activeTab = ref<'game' | 'leaderboard'>('game')
+
+// Refresh leaderboard when switching tabs (scores may have been submitted on the game tab).
+watch(activeTab, (tab) => {
+  if (tab === 'leaderboard')
+    wordleResultSignal.value++
+})
 </script>
 
 <template>
@@ -42,11 +48,11 @@ const activeTab = ref<'game' | 'leaderboard'>('game')
           </button>
         </div>
 
-        <section v-if="activeTab === 'game'" p4 min-w-0>
+        <section v-show="activeTab === 'game'" p4 min-w-0>
           <WordleBoard mx-auto w-full />
         </section>
 
-        <section v-else p4 min-w-0>
+        <section v-show="activeTab === 'leaderboard'" p4 min-w-0>
           <WordleLeaderboard />
         </section>
       </div>
