@@ -8,6 +8,7 @@ const props = defineProps<{
 
 const { client } = useMasto()
 const { downloadAsFile } = useGiphy()
+const { isUploading: isUploadingImage, pickImage, uploadImage } = useSingleImageUpload()
 
 const replies = ref<mastodon.v1.Status[]>([])
 const loading = ref(false)
@@ -16,7 +17,16 @@ const commentText = ref('')
 const posting = ref(false)
 const loaded = ref(false)
 const pendingGif = ref<GiphyGif | null>(null)
+const pendingImage = ref<{ file: File, previewUrl: string } | null>(null)
 const uploadingGif = ref(false)
+const mediaError = ref('')
+
+const hasPendingMedia = computed(() => pendingGif.value !== null || pendingImage.value !== null)
+const isUploadingMedia = computed(() => uploadingGif.value || isUploadingImage.value)
+
+const canSend = computed(() =>
+  !posting.value && !isUploadingMedia.value && (commentText.value.trim().length > 0 || hasPendingMedia.value),
+)
 
 const visibleReplies = computed(() => {
   if (expanded.value || replies.value.length <= 2)
@@ -28,13 +38,17 @@ const totalCount = computed(() =>
   Math.max(replies.value.length, props.status.repliesCount || 0),
 )
 
-const canSend = computed(() =>
-  !posting.value && !uploadingGif.value && (commentText.value.trim().length > 0 || pendingGif.value !== null),
-)
-
 const remainingCount = computed(() =>
   expanded.value ? 0 : Math.max(0, totalCount.value - visibleReplies.value.length),
 )
+
+function clearImage() {
+  mediaError.value = ''
+  if (pendingImage.value) {
+    URL.revokeObjectURL(pendingImage.value.previewUrl)
+    pendingImage.value = null
+  }
+}
 
 async function loadReplies() {
   if (loading.value || loaded.value)
@@ -56,7 +70,7 @@ async function loadReplies() {
   }
 }
 
-async function uploadGif(gif: GiphyGif): Promise<string | null> {
+async function uploadGif(gif: GiphyGif): Promise<string> {
   uploadingGif.value = true
   try {
     const file = await downloadAsFile(gif)
@@ -65,7 +79,7 @@ async function uploadGif(gif: GiphyGif): Promise<string | null> {
   }
   catch (e) {
     console.error('[StatusInlineComments] GIF upload failed', e)
-    return null
+    throw e
   }
   finally {
     uploadingGif.value = false
@@ -75,7 +89,8 @@ async function uploadGif(gif: GiphyGif): Promise<string | null> {
 async function postComment() {
   const text = commentText.value.trim()
   const gif = pendingGif.value
-  if ((!text && !gif) || posting.value)
+  const image = pendingImage.value
+  if ((!text && !gif && !image) || posting.value)
     return
   if (!checkLogin())
     return
@@ -85,8 +100,11 @@ async function postComment() {
     const mediaIds: string[] = []
     if (gif) {
       const id = await uploadGif(gif)
-      if (id)
-        mediaIds.push(id)
+      mediaIds.push(id)
+    }
+    else if (image) {
+      const id = await uploadImage(image.file)
+      mediaIds.push(id)
     }
     const newReply = await client.value.v1.statuses.create({
       status: text,
@@ -97,10 +115,12 @@ async function postComment() {
     replies.value.push(newReply)
     commentText.value = ''
     pendingGif.value = null
+    clearImage()
     loaded.value = true
   }
   catch (e) {
     console.error('[StatusInlineComments] Failed to post comment', e)
+    mediaError.value = (e as Error).message || 'Failed to post comment. Please try again.'
   }
   finally {
     posting.value = false
@@ -108,11 +128,48 @@ async function postComment() {
 }
 
 function onPickGif(gif: GiphyGif) {
+  mediaError.value = ''
+  clearImage()
   pendingGif.value = gif
 }
 
 function clearGif() {
+  mediaError.value = ''
   pendingGif.value = null
+}
+
+function setPendingImage(file: File) {
+  mediaError.value = ''
+  if (!file.type.startsWith('image/')) {
+    mediaError.value = 'Only image files can be added to comments.'
+    return
+  }
+  clearGif()
+  clearImage()
+  pendingImage.value = {
+    file,
+    previewUrl: URL.createObjectURL(file),
+  }
+}
+
+async function onPickImage() {
+  mediaError.value = ''
+  const file = await pickImage()
+  if (!file)
+    return
+  setPendingImage(file)
+}
+
+function handlePaste(evt: ClipboardEvent) {
+  mediaError.value = ''
+  const files = evt.clipboardData?.files
+  if (!files?.length)
+    return
+  const image = [...files].find(file => file.type.startsWith('image/'))
+  if (!image)
+    return
+  evt.preventDefault()
+  setPendingImage(image)
 }
 
 const commentInputRef = ref<HTMLInputElement>()
@@ -154,6 +211,10 @@ onMounted(() => {
     }
   }, { rootMargin: '200px' })
   observer.observe(el.value)
+})
+
+onUnmounted(() => {
+  clearImage()
 })
 
 function timeSince(dateStr: string): string {
@@ -211,7 +272,7 @@ function timeSince(dateStr: string): string {
       <div v-else w-8 h-8 rounded-full bg-card shrink-0 mt-1 />
       <div
         flex-1 min-w-0 bg-card px-2
-        :class="pendingGif ? 'rounded-3 py-2 flex flex-col gap-2' : 'rounded-full flex gap-1 items-center'"
+        :class="hasPendingMedia ? 'rounded-3 py-2 flex flex-col gap-2' : 'rounded-full flex gap-1 items-center'"
       >
         <div
           v-if="pendingGif"
@@ -228,6 +289,24 @@ function timeSince(dateStr: string): string {
             <div i-ri:close-line />
           </button>
         </div>
+        <div
+          v-else-if="pendingImage"
+          relative w-fit max-w-40 rounded-2 overflow-hidden
+        >
+          <img :src="pendingImage.previewUrl" :alt="pendingImage.file.name" block w-full>
+          <button
+            type="button"
+            absolute top-1 right-1 w-6 h-6 rounded-full bg-black bg-opacity-60 text-white
+            flex items-center justify-center text-xs cursor-pointer
+            aria-label="Remove image"
+            @click="clearImage"
+          >
+            <div i-ri:close-line />
+          </button>
+        </div>
+        <p v-if="mediaError" text-xs text-red-500 m-0>
+          {{ mediaError }}
+        </p>
         <div flex="~ gap-1" items-center w-full>
           <input
             ref="commentInputRef"
@@ -235,7 +314,8 @@ function timeSince(dateStr: string): string {
             type="text"
             placeholder="Write a comment…"
             flex-1 bg-transparent px-2 py-2 text-sm outline-none min-w-0
-            :disabled="posting || uploadingGif"
+            :disabled="posting || isUploadingMedia"
+            @paste="handlePaste"
             @keydown.enter.prevent="postComment"
           >
           <PublishEmojiPicker @select="onPickEmoji" @select-custom="onPickCustomEmoji">
@@ -244,18 +324,28 @@ function timeSince(dateStr: string): string {
               flex items-center justify-center w-8 h-8 rounded-full
               hover:bg-active cursor-pointer disabled:opacity-50 disabled:pointer-events-none
               aria-label="Add emoji"
-              :disabled="posting || uploadingGif"
+              :disabled="posting || isUploadingMedia"
             >
               <div i-ri:emotion-line text-lg text-secondary />
             </button>
           </PublishEmojiPicker>
+          <button
+            type="button"
+            flex items-center justify-center w-8 h-8 rounded-full
+            hover:bg-active cursor-pointer disabled:opacity-50 disabled:pointer-events-none
+            :aria-label="$t('tooltip.add_media')"
+            :disabled="posting || isUploadingMedia"
+            @click="onPickImage"
+          >
+            <div i-ri:image-add-line text-lg text-secondary />
+          </button>
           <PublishGifPicker @select="onPickGif">
             <button
               type="button"
               flex items-center justify-center w-8 h-8 rounded-full
               hover:bg-active cursor-pointer disabled:opacity-50 disabled:pointer-events-none
               aria-label="Add GIF"
-              :disabled="posting || uploadingGif"
+              :disabled="posting || isUploadingMedia"
             >
               <div i-ri:file-gif-line text-lg text-secondary />
             </button>
@@ -269,7 +359,7 @@ function timeSince(dateStr: string): string {
             :disabled="!canSend"
             @click="postComment"
           >
-            <div v-if="posting || uploadingGif" i-ri:loader-2-fill animate-spin />
+            <div v-if="posting || isUploadingMedia" i-ri:loader-2-fill animate-spin />
             <div v-else i-ri:send-plane-fill text-lg />
           </button>
         </div>
