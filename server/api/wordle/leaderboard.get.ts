@@ -89,13 +89,18 @@ function buildAllTime(results: WordleResult[]): AllTimeEntry[] {
   }
 
   return entries.sort((a, b) => {
-    if (b.won !== a.won)
-      return b.won - a.won
-    if (b.winRate !== a.winRate)
-      return b.winRate - a.winRate
+    // Match the streak column shown in the UI, then skill (avg guesses) and volume.
+    if (b.currentStreak !== a.currentStreak)
+      return b.currentStreak - a.currentStreak
+    if (b.maxStreak !== a.maxStreak)
+      return b.maxStreak - a.maxStreak
     const ag = a.avgGuesses ?? Number.POSITIVE_INFINITY
     const bg = b.avgGuesses ?? Number.POSITIVE_INFINITY
-    return ag - bg
+    if (ag !== bg)
+      return ag - bg
+    if (b.winRate !== a.winRate)
+      return b.winRate - a.winRate
+    return b.won - a.won
   })
 }
 

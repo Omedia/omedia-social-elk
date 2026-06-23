@@ -10,7 +10,7 @@ const { client } = useMasto()
 const { downloadAsFile } = useGiphy()
 const { isUploading: isUploadingImage, pickImage, uploadImage } = useSingleImageUpload()
 
-const replies = ref<mastodon.v1.Status[]>([])
+const allReplies = ref<mastodon.v1.Status[]>([])
 const loading = ref(false)
 const expanded = ref(false)
 const commentText = ref('')
@@ -25,22 +25,50 @@ const hasPendingMedia = computed(() => pendingGif.value !== null || pendingImage
 const isUploadingMedia = computed(() => uploadingGif.value || isUploadingImage.value)
 
 const canSend = computed(() =>
-  !posting.value && !isUploadingMedia.value && (commentText.value.trim().length > 0 || hasPendingMedia.value),
+  !posting.value && !isUploadingMedia.value
+  && (commentText.value.trim().length > 0 || hasPendingMedia.value),
 )
 
-const visibleReplies = computed(() => {
-  if (expanded.value || replies.value.length <= 2)
-    return replies.value
-  return replies.value.slice(-2)
+const directReplies = computed(() =>
+  allReplies.value
+    .filter(r => r.inReplyToId === props.status.id)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()),
+)
+
+const visibleDirectReplies = computed(() => {
+  if (expanded.value || directReplies.value.length <= 2)
+    return directReplies.value
+  return directReplies.value.slice(-2)
 })
 
+const visibleDirectIds = computed(() => new Set(visibleDirectReplies.value.map(r => r.id)))
+
+const visibleReplyCount = computed(() =>
+  allReplies.value.filter(r =>
+    visibleDirectIds.value.has(r.id)
+    || (r.inReplyToId && visibleDirectIds.value.has(r.inReplyToId)),
+  ).length,
+)
+
 const totalCount = computed(() =>
-  Math.max(replies.value.length, props.status.repliesCount || 0),
+  Math.max(allReplies.value.length, props.status.repliesCount || 0),
 )
 
 const remainingCount = computed(() =>
-  expanded.value ? 0 : Math.max(0, totalCount.value - visibleReplies.value.length),
+  expanded.value ? 0 : Math.max(0, totalCount.value - visibleReplyCount.value),
 )
+
+function childReplies(parentId: string) {
+  return allReplies.value
+    .filter(r => r.inReplyToId === parentId)
+    .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
+}
+
+function updateReply(updated: mastodon.v1.Status) {
+  const index = allReplies.value.findIndex(r => r.id === updated.id)
+  if (index !== -1)
+    allReplies.value[index] = updated
+}
 
 function clearImage() {
   mediaError.value = ''
@@ -56,9 +84,7 @@ async function loadReplies() {
   loading.value = true
   try {
     const context = await client.value.v1.statuses.$select(props.status.id).context.fetch()
-    // Direct replies only (excludes nested ones), oldest first so the thread reads chronologically
-    replies.value = (context.descendants || [])
-      .filter(r => r.inReplyToId === props.status.id)
+    allReplies.value = (context.descendants || [])
       .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
     loaded.value = true
   }
@@ -112,7 +138,7 @@ async function postComment() {
       visibility: props.status.visibility,
       mediaIds: mediaIds.length ? mediaIds : undefined,
     })
-    replies.value.push(newReply)
+    allReplies.value.push(newReply)
     commentText.value = ''
     pendingGif.value = null
     clearImage()
@@ -216,22 +242,6 @@ onMounted(() => {
 onUnmounted(() => {
   clearImage()
 })
-
-function timeSince(dateStr: string): string {
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
-  if (seconds < 60)
-    return `${seconds}s`
-  const minutes = Math.floor(seconds / 60)
-  if (minutes < 60)
-    return `${minutes}m`
-  const hours = Math.floor(minutes / 60)
-  if (hours < 24)
-    return `${hours}h`
-  const days = Math.floor(hours / 24)
-  if (days < 7)
-    return `${days}d`
-  return new Date(dateStr).toLocaleDateString()
-}
 </script>
 
 <template>
@@ -246,25 +256,22 @@ function timeSince(dateStr: string): string {
     </button>
 
     <div
-      v-for="reply in visibleReplies"
+      v-for="reply in visibleDirectReplies"
       :key="reply.id"
-      flex="~ gap-2" items-start
+      flex="~ col gap-2"
+      border-l="~ base" ml-4 pl-2
     >
-      <NuxtLink :to="getAccountRoute(reply.account)" shrink-0>
-        <AccountAvatar :account="reply.account" w-8 h-8 />
-      </NuxtLink>
-      <div flex="~ col" flex-1 bg-card rounded-3 px-3 py-2 text-sm min-w-0>
-        <NuxtLink :to="getAccountRoute(reply.account)" font-bold text-sm hover:underline>
-          {{ reply.account.displayName || reply.account.username }}
-        </NuxtLink>
-        <div v-if="reply.content" class="comment-content" v-html="reply.content" />
-        <div v-if="reply.mediaAttachments?.length" mt-2 max-w-60>
-          <StatusMedia :status="reply" />
-        </div>
-        <div text-xs text-secondary mt-1>
-          {{ timeSince(reply.createdAt) }}
-        </div>
-      </div>
+      <StatusInlineCommentBubble
+        :reply="reply"
+        @update="updateReply"
+      />
+      <StatusInlineCommentBubble
+        v-for="nested in childReplies(reply.id)"
+        :key="nested.id"
+        :reply="nested"
+        nested
+        @update="updateReply"
+      />
     </div>
 
     <div flex="~ gap-2" items-start mt-1>
@@ -367,18 +374,3 @@ function timeSince(dateStr: string): string {
     </div>
   </div>
 </template>
-
-<style scoped>
-.comment-content :deep(p) {
-  margin: 0;
-}
-.comment-content :deep(p + p) {
-  margin-top: 0.25rem;
-}
-.comment-content :deep(a) {
-  color: var(--c-primary);
-}
-.comment-content :deep(a:hover) {
-  text-decoration: underline;
-}
-</style>
