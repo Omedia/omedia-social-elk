@@ -168,6 +168,106 @@ export function usePublish(options: {
 
 export type MediaAttachmentUploadError = [filename: string, message: string]
 
+function getMaxImagePixels() {
+  return currentInstance.value?.configuration?.mediaAttachments?.imageMatrixLimit
+    ?? 4096 ** 2
+}
+
+function loadImageFile(inputFile: Blob) {
+  return new Promise<HTMLImageElement>((resolve, reject) => {
+    const url = URL.createObjectURL(inputFile)
+    const img = new Image()
+
+    img.onerror = err => reject(err)
+    img.onload = () => resolve(img)
+
+    img.src = url
+  })
+}
+
+function resizeImageFile(img: HTMLImageElement, maxPixels: number, type = 'image/png') {
+  const { width, height } = img
+  const aspectRatio = width / height
+  const canvas = document.createElement('canvas')
+  const resizedWidth = canvas.width = Math.round(Math.sqrt(maxPixels * aspectRatio))
+  const resizedHeight = canvas.height = Math.round(Math.sqrt(maxPixels / aspectRatio))
+  const context = canvas.getContext('2d')
+  context?.drawImage(img, 0, 0, resizedWidth, resizedHeight)
+  return new Promise<Blob | null>((resolve) => {
+    canvas.toBlob(resolve, type)
+  })
+}
+
+async function prepareImageFileForUpload(file: File) {
+  try {
+    const image = await loadImageFile(file)
+    const maxPixels = getMaxImagePixels()
+    if (image.width * image.height > maxPixels)
+      file = await resizeImageFile(image, maxPixels, file.type) as File
+    return file
+  }
+  catch (e) {
+    console.error(e)
+    return file
+  }
+}
+
+async function prepareFileForUpload(file: File) {
+  if (file.type.startsWith('image/'))
+    return await prepareImageFileForUpload(file)
+  return file
+}
+
+export function useSingleImageUpload() {
+  const { client } = useMasto()
+  const { formatFileSize } = useFileSizeFormatter()
+  const isUploading = ref(false)
+
+  async function pickImage() {
+    if (import.meta.server)
+      return null
+    const supported = currentInstance.value?.configuration?.mediaAttachments.supportedMimeTypes
+    const mimeTypes = supported?.filter(type => type.startsWith('image/'))
+    try {
+      return await fileOpen({
+        description: 'Image',
+        multiple: false,
+        mimeTypes: mimeTypes?.length ? mimeTypes : ['image/*'],
+      })
+    }
+    catch {
+      return null
+    }
+  }
+
+  async function uploadImage(file: File): Promise<string> {
+    const maxImageSize = currentInstance.value?.configuration?.mediaAttachments.imageSizeLimit || 0
+    if (maxImageSize > 0 && file.size > maxImageSize)
+      throw new Error(`Image is too large. Maximum size is ${formatFileSize(maxImageSize)}.`)
+
+    isUploading.value = true
+    try {
+      const media = await client.value.v2.media.create({
+        file: await prepareFileForUpload(file),
+      })
+      return media.id
+    }
+    catch (e) {
+      console.error('[useSingleImageUpload] Image upload failed', e)
+      throw e
+    }
+    finally {
+      isUploading.value = false
+    }
+  }
+
+  return {
+    isUploading,
+    pickImage,
+    uploadImage,
+  }
+}
+
 export function useUploadMediaAttachment(draft: Ref<DraftItem>) {
   const { client } = useMasto()
   const { t } = useI18n()
@@ -177,63 +277,6 @@ export function useUploadMediaAttachment(draft: Ref<DraftItem>) {
   const isExceedingAttachmentLimit = ref<boolean>(false)
   const failedAttachments = ref<MediaAttachmentUploadError[]>([])
   const dropZoneRef = ref<HTMLDivElement>()
-
-  const maxPixels = computed(() => {
-    return currentInstance.value?.configuration?.mediaAttachments?.imageMatrixLimit
-      ?? 4096 ** 2
-  })
-
-  const loadImage = (inputFile: Blob) => new Promise<HTMLImageElement>((resolve, reject) => {
-    const url = URL.createObjectURL(inputFile)
-    const img = new Image()
-
-    img.onerror = err => reject(err)
-    img.onload = () => resolve(img)
-
-    img.src = url
-  })
-
-  function resizeImage(img: HTMLImageElement, type = 'image/png'): Promise<Blob | null> {
-    const { width, height } = img
-
-    const aspectRatio = (width as number) / (height as number)
-
-    const canvas = document.createElement('canvas')
-
-    const resizedWidth = canvas.width = Math.round(Math.sqrt(maxPixels.value * aspectRatio))
-    const resizedHeight = canvas.height = Math.round(Math.sqrt(maxPixels.value / aspectRatio))
-
-    const context = canvas.getContext('2d')
-
-    context?.drawImage(img, 0, 0, resizedWidth, resizedHeight)
-
-    return new Promise((resolve) => {
-      canvas.toBlob(resolve, type)
-    })
-  }
-
-  async function processImageFile(file: File) {
-    try {
-      const image = await loadImage(file) as HTMLImageElement
-
-      if (image.width * image.height > maxPixels.value)
-        file = await resizeImage(image, file.type) as File
-
-      return file
-    }
-    catch (e) {
-      // Resize failed, just use the original file
-      console.error(e)
-      return file
-    }
-  }
-
-  async function processFile(file: File) {
-    if (file.type.startsWith('image/'))
-      return await processImageFile(file)
-
-    return file
-  }
 
   async function uploadAttachments(files: File[]) {
     isUploading.value = true
@@ -270,7 +313,7 @@ export function useUploadMediaAttachment(draft: Ref<DraftItem>) {
         isExceedingAttachmentLimit.value = false
         try {
           const attachment = await client.value.v1.media.create({
-            file: await processFile(file),
+            file: await prepareFileForUpload(file),
           })
           draft.value.attachments.push(attachment)
         }
