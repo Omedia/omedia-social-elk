@@ -13,6 +13,14 @@ watch(wordleResultSignal, refresh)
 function rankLabel(i: number): string {
   return ['1', '2', '3'][i] ?? String(i + 1)
 }
+
+function profileRoute(acct: string) {
+  return `/@${acct}`
+}
+
+function shortHandle(acct: string) {
+  return accountToShortHandle(acct)
+}
 </script>
 
 <template>
@@ -63,14 +71,20 @@ function rankLabel(i: number): string {
           :key="entry.acct"
           flex items-center gap-3 px-4 py-2 border-b border-base
         >
-          <span w-6 text-center font-bold text-secondary>{{ rankLabel(i) }}</span>
-          <img :src="entry.avatar" :alt="entry.displayName" w-8 h-8 rounded-full bg-base shrink-0>
-          <div flex="~ col" min-w-0 flex-auto>
-            <span font-medium truncate>{{ entry.displayName }}</span>
-            <span text-xs text-secondary truncate>@{{ entry.acct }}</span>
-          </div>
+          <span w-6 text-center font-bold text-secondary shrink-0>{{ rankLabel(i) }}</span>
+          <NuxtLink
+            :to="profileRoute(entry.acct)"
+            flex items-center gap-3 min-w-0 flex-1 rounded-lg -mx-1 px-1
+            hover:bg-active transition-100
+          >
+            <img :src="entry.avatar" :alt="entry.displayName" w-8 h-8 rounded-full bg-base shrink-0>
+            <div flex="~ col" min-w-0>
+              <span font-medium truncate>{{ entry.displayName }}</span>
+              <span text-xs text-secondary truncate>{{ shortHandle(entry.acct) }}</span>
+            </div>
+          </NuxtLink>
           <span
-            font-bold font-mono
+            font-bold font-mono shrink-0
             :class="entry.status === 'won' ? 'text-primary' : 'text-secondary'"
           >
             {{ entry.status === 'won' ? `${entry.guesses}/6` : 'X/6' }}
@@ -90,15 +104,21 @@ function rankLabel(i: number): string {
           :key="entry.acct"
           flex items-center gap-3 px-4 py-2 border-b border-base
         >
-          <span w-6 text-center font-bold text-secondary>{{ rankLabel(i) }}</span>
-          <img :src="entry.avatar" :alt="entry.displayName" w-8 h-8 rounded-full bg-base shrink-0>
-          <div flex="~ col" min-w-0 flex-auto>
-            <span font-medium truncate>{{ entry.displayName }}</span>
-            <span text-xs text-secondary truncate>
-              {{ entry.won }}/{{ entry.played }} won · {{ entry.winRate }}%<template v-if="entry.avgGuesses !== null"> · avg {{ entry.avgGuesses }}</template>
-            </span>
-          </div>
-          <span flex="~ gap-1" items-center font-bold text-primary title="Current streak">
+          <span w-6 text-center font-bold text-secondary shrink-0>{{ rankLabel(i) }}</span>
+          <NuxtLink
+            :to="profileRoute(entry.acct)"
+            flex items-center gap-3 min-w-0 flex-1 rounded-lg -mx-1 px-1
+            hover:bg-active transition-100
+          >
+            <img :src="entry.avatar" :alt="entry.displayName" w-8 h-8 rounded-full bg-base shrink-0>
+            <div flex="~ col" min-w-0>
+              <span font-medium truncate>{{ entry.displayName }}</span>
+              <span text-xs text-secondary truncate>
+                {{ entry.won }}/{{ entry.played }} won · {{ entry.winRate }}%<template v-if="entry.avgGuesses !== null"> · avg {{ entry.avgGuesses }}</template>
+              </span>
+            </div>
+          </NuxtLink>
+          <span flex="~ gap-1" items-center font-bold text-primary shrink-0 title="Current streak">
             <div i-ri:fire-line />
             {{ entry.currentStreak }}
           </span>
