@@ -46,7 +46,7 @@ const keyboardState = computed(() => {
 })
 
 function evaluate(guess: string, target: string): Verdict[] {
-  const result: Verdict[] = Array.from({ length: WORD_LENGTH }).fill('absent')
+  const result = Array.from({ length: WORD_LENGTH }).fill('absent') as Verdict[]
   const counts: Record<string, number> = {}
   for (const ch of target)
     counts[ch] = (counts[ch] || 0) + 1
