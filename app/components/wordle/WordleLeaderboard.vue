@@ -3,12 +3,16 @@ import { getPuzzleNumber } from '~/constants/wordle-words'
 
 const puzzleNumber = getPuzzleNumber()
 const { data, pending, refresh } = useWordleLeaderboard(puzzleNumber)
+const { profiles, resolveProfiles } = useAccountProfiles()
 
 const tab = ref<'today' | 'all'>('today')
 const isSignedIn = computed(() => !!currentUser.value?.account?.acct)
 
 onMounted(refresh)
 watch(wordleResultSignal, refresh)
+watch(data, (d) => {
+  resolveProfiles([...d.today, ...d.allTime].map(e => e.acct))
+}, { immediate: true })
 
 function rankLabel(i: number): string {
   return ['1', '2', '3'][i] ?? String(i + 1)
@@ -22,13 +26,20 @@ function shortHandle(acct: string) {
   return accountToShortHandle(acct)
 }
 
-// Bold name = the player's display name. When they haven't set one, older rows
-// fell back to the full `user@domain` handle — show just the username instead.
+// Prefer the player's live profile; fall back to the stored snapshot, and when
+// that's just the handle, show the bare username (never user@domain).
 function nameFor(entry: { displayName: string, acct: string }): string {
+  const live = profiles.value[entry.acct]?.displayName
+  if (live)
+    return live
   const name = entry.displayName?.trim()
   if (!name || name === entry.acct || name.includes('@'))
     return entry.acct.split('@')[0]
   return name
+}
+
+function avatarFor(entry: { avatar: string, acct: string }): string {
+  return profiles.value[entry.acct]?.avatar || entry.avatar
 }
 </script>
 
@@ -86,7 +97,7 @@ function nameFor(entry: { displayName: string, acct: string }): string {
             flex items-center gap-3 min-w-0 flex-1 rounded-lg -mx-1 px-1
             hover:bg-active transition-100
           >
-            <img :src="entry.avatar" :alt="entry.displayName" w-8 h-8 rounded-full bg-base shrink-0>
+            <img :src="avatarFor(entry)" :alt="nameFor(entry)" w-8 h-8 rounded-full bg-base shrink-0>
             <div flex="~ col" min-w-0>
               <span font-medium truncate>{{ nameFor(entry) }}</span>
               <span text-xs text-secondary truncate>{{ shortHandle(entry.acct) }}</span>
@@ -119,7 +130,7 @@ function nameFor(entry: { displayName: string, acct: string }): string {
             flex items-center gap-3 min-w-0 flex-1 rounded-lg -mx-1 px-1
             hover:bg-active transition-100
           >
-            <img :src="entry.avatar" :alt="entry.displayName" w-8 h-8 rounded-full bg-base shrink-0>
+            <img :src="avatarFor(entry)" :alt="nameFor(entry)" w-8 h-8 rounded-full bg-base shrink-0>
             <div flex="~ col" min-w-0>
               <span font-medium truncate>{{ nameFor(entry) }}</span>
               <span text-xs text-secondary truncate>
