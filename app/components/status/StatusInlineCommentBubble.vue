@@ -112,7 +112,11 @@ async function toggleFavourite() {
 }
 
 function timeSince(dateStr: string): string {
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+  // Clamp to 0: a just-posted comment's server timestamp can be a hair ahead of
+  // the local clock, which would otherwise render as "-1s".
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000))
+  if (seconds < 5)
+    return 'now'
   if (seconds < 60)
     return `${seconds}s`
   const minutes = Math.floor(seconds / 60)

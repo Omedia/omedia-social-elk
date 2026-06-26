@@ -142,6 +142,12 @@ const userSettings = useUserSettings()
         {{ $t("settings.preferences.hide_news") }}
       </SettingsToggleItem>
       <SettingsToggleItem
+        :checked="getPreferences(userSettings, 'hideNewMembers')"
+        @click="togglePreferences('hideNewMembers')"
+      >
+        {{ $t("settings.preferences.hide_new_members") }}
+      </SettingsToggleItem>
+      <SettingsToggleItem
         :checked="getPreferences(userSettings, 'hideRepliesInTimeline')"
         @click="togglePreferences('hideRepliesInTimeline')"
       >

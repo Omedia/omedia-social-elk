@@ -65,7 +65,7 @@ export default defineEventHandler(async (event) => {
 
     const entry: WordleResult = {
       acct,
-      displayName: account.display_name || acct,
+      displayName: account.display_name?.trim() || account.username || acct,
       avatar: account.avatar || '',
       puzzleNumber,
       status,
