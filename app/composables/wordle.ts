@@ -34,25 +34,23 @@ export const wordleResultSignal = ref(0)
 
 /**
  * Submit the current user's result for a puzzle. No-op for guests.
- * The server only keeps the first submission per (puzzle, account).
+ * The access token is sent so the server can resolve the account itself —
+ * identity is never taken from the request body. The server only keeps the
+ * first submission per (puzzle, account).
  */
 export async function submitWordleScore(payload: WordleScorePayload): Promise<boolean> {
-  const account = currentUser.value?.account
-  if (!account?.acct)
+  const user = currentUser.value
+  if (!user?.token || !user.account?.acct)
     return false
 
   try {
     await $fetch('/api/wordle/score', {
       method: 'POST',
+      headers: { Authorization: `Bearer ${user.token}` },
       body: {
         puzzleNumber: payload.puzzleNumber,
         status: payload.status,
         guesses: payload.guesses,
-        account: {
-          acct: account.acct,
-          displayName: account.displayName,
-          avatar: account.avatar,
-        },
       },
     })
     wordleResultSignal.value++

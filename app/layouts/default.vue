@@ -12,6 +12,7 @@ const showUserPicker = logicAnd(
 )
 
 const isGrayscale = usePreferences('grayscaleMode')
+const hideNewMembers = usePreferences('hideNewMembers')
 </script>
 
 <template>
@@ -61,7 +62,7 @@ const isGrayscale = usePreferences('grayscaleMode')
           <slot name="right">
             <NavWelcomeCard v-if="!currentUser" hidden xl:block />
             <SearchWidget mt-4 mx-1 hidden xl:block />
-            <NavNewMembers v-if="currentUser" hidden xl:block />
+            <NavNewMembers v-if="currentUser && !hideNewMembers" hidden xl:block />
 
             <div flex-auto />
             <LazyCommonPreviewPrompt v-if="info.env === 'preview'" />

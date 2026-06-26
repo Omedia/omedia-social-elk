@@ -22,6 +22,7 @@ export interface PreferencesSettings {
   hideAccountHoverCard: boolean
   hideTagHoverCard: boolean
   hideNews: boolean
+  hideNewMembers: boolean
   hideRepliesInTimeline: boolean
   hideBoostsInTimeline: boolean
   disableTimelineAutoloading: boolean
@@ -83,6 +84,7 @@ export const DEFAULT__PREFERENCES_SETTINGS: PreferencesSettings = {
   hideAccountHoverCard: false,
   hideTagHoverCard: false,
   hideNews: false,
+  hideNewMembers: false,
   hideRepliesInTimeline: true,
   hideBoostsInTimeline: false,
   disableTimelineAutoloading: false,

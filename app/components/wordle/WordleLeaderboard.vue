@@ -21,6 +21,15 @@ function profileRoute(acct: string) {
 function shortHandle(acct: string) {
   return accountToShortHandle(acct)
 }
+
+// Bold name = the player's display name. When they haven't set one, older rows
+// fell back to the full `user@domain` handle — show just the username instead.
+function nameFor(entry: { displayName: string, acct: string }): string {
+  const name = entry.displayName?.trim()
+  if (!name || name === entry.acct || name.includes('@'))
+    return entry.acct.split('@')[0]
+  return name
+}
 </script>
 
 <template>
@@ -79,7 +88,7 @@ function shortHandle(acct: string) {
           >
             <img :src="entry.avatar" :alt="entry.displayName" w-8 h-8 rounded-full bg-base shrink-0>
             <div flex="~ col" min-w-0>
-              <span font-medium truncate>{{ entry.displayName }}</span>
+              <span font-medium truncate>{{ nameFor(entry) }}</span>
               <span text-xs text-secondary truncate>{{ shortHandle(entry.acct) }}</span>
             </div>
           </NuxtLink>
@@ -112,7 +121,7 @@ function shortHandle(acct: string) {
           >
             <img :src="entry.avatar" :alt="entry.displayName" w-8 h-8 rounded-full bg-base shrink-0>
             <div flex="~ col" min-w-0>
-              <span font-medium truncate>{{ entry.displayName }}</span>
+              <span font-medium truncate>{{ nameFor(entry) }}</span>
               <span text-xs text-secondary truncate>
                 {{ entry.won }}/{{ entry.played }} won · {{ entry.winRate }}%<template v-if="entry.avgGuesses !== null"> · avg {{ entry.avgGuesses }}</template>
               </span>

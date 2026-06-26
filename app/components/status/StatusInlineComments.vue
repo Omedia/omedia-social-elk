@@ -29,6 +29,31 @@ const canSend = computed(() =>
   && (commentText.value.trim().length > 0 || hasPendingMedia.value),
 )
 
+const replyById = computed(() => {
+  const map = new Map<string, mastodon.v1.Status>()
+  for (const r of allReplies.value)
+    map.set(r.id, r)
+  return map
+})
+
+// Walk up the reply chain to the top-level reply (the one replying directly to
+// the status). Replies are shown at a single level of nesting, so a reply to a
+// reply-to-a-reply is grouped under its top-level ancestor instead of vanishing.
+// Returns null if the chain doesn't lead back to this status.
+function topLevelAncestorId(reply: mastodon.v1.Status): string | null {
+  let current: mastodon.v1.Status | undefined = reply
+  const seen = new Set<string>()
+  while (current) {
+    if (current.inReplyToId === props.status.id)
+      return current.id
+    if (!current.inReplyToId || seen.has(current.id))
+      return null
+    seen.add(current.id)
+    current = replyById.value.get(current.inReplyToId)
+  }
+  return null
+}
+
 const directReplies = computed(() =>
   allReplies.value
     .filter(r => r.inReplyToId === props.status.id)
@@ -41,13 +66,11 @@ const visibleDirectReplies = computed(() => {
   return directReplies.value.slice(-2)
 })
 
-const visibleDirectIds = computed(() => new Set(visibleDirectReplies.value.map(r => r.id)))
-
 const visibleReplyCount = computed(() =>
-  allReplies.value.filter(r =>
-    visibleDirectIds.value.has(r.id)
-    || (r.inReplyToId && visibleDirectIds.value.has(r.inReplyToId)),
-  ).length,
+  visibleDirectReplies.value.reduce(
+    (sum, r) => sum + 1 + childReplies(r.id).length,
+    0,
+  ),
 )
 
 const totalCount = computed(() =>
@@ -58,9 +81,10 @@ const remainingCount = computed(() =>
   expanded.value ? 0 : Math.max(0, totalCount.value - visibleReplyCount.value),
 )
 
+// All descendants of a top-level reply, flattened into one level and ordered by time.
 function childReplies(parentId: string) {
   return allReplies.value
-    .filter(r => r.inReplyToId === parentId)
+    .filter(r => r.id !== parentId && topLevelAncestorId(r) === parentId)
     .sort((a, b) => new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime())
 }
 

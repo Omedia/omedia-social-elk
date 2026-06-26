@@ -5,6 +5,11 @@ const { client } = useMasto()
 const accounts = ref<mastodon.v1.Account[]>([])
 const loading = ref(false)
 const errored = ref(false)
+const hideNewMembers = usePreferences('hideNewMembers')
+
+function dismiss() {
+  hideNewMembers.value = true
+}
 
 async function load() {
   if (!client.value)
@@ -34,15 +39,26 @@ onMounted(load)
       <h3 text-base font-bold>
         New on Omedia
       </h3>
-      <button
-        type="button"
-        text-secondary hover:text-primary cursor-pointer
-        aria-label="Refresh"
-        :disabled="loading"
-        @click="load"
-      >
-        <div :class="loading ? 'i-ri:loader-2-fill animate-spin' : 'i-ri:refresh-line'" text-base />
-      </button>
+      <div flex items-center gap-1>
+        <button
+          type="button"
+          text-secondary hover:text-primary cursor-pointer
+          aria-label="Refresh"
+          :disabled="loading"
+          @click="load"
+        >
+          <div :class="loading ? 'i-ri:loader-2-fill animate-spin' : 'i-ri:refresh-line'" text-base />
+        </button>
+        <button
+          type="button"
+          text-secondary hover:text-primary cursor-pointer
+          :aria-label="$t('settings.preferences.hide_new_members')"
+          :title="$t('settings.preferences.hide_new_members')"
+          @click="dismiss"
+        >
+          <div i-ri:close-line text-base />
+        </button>
+      </div>
     </div>
 
     <div v-if="errored" text-sm text-secondary>

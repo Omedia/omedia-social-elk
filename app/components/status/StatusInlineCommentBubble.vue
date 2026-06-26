@@ -112,7 +112,11 @@ async function toggleFavourite() {
 }
 
 function timeSince(dateStr: string): string {
-  const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
+  // Clamp to 0: a just-posted comment's server timestamp can be a hair ahead of
+  // the local clock, which would otherwise render as "-1s".
+  const seconds = Math.max(0, Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000))
+  if (seconds < 5)
+    return 'now'
   if (seconds < 60)
     return `${seconds}s`
   const minutes = Math.floor(seconds / 60)
@@ -184,28 +188,36 @@ function timeSince(dateStr: string): string {
         <div flex="~ gap-2" items-center text-xs text-secondary mt-1>
           <span>{{ timeSince(reply.createdAt) }}</span>
           <StatusEditIndicator :status="reply" inline />
-          <button
-            v-if="isHydrated && currentUser"
-            type="button"
-            flex items-center gap-0.5
-            :class="reply.favourited
-              ? (useStarFavoriteIcon ? 'text-yellow' : 'text-rose')
-              : (useStarFavoriteIcon ? 'hover:text-yellow' : 'hover:text-rose')"
-            :disabled="favouriting || disabled"
-            :aria-label="$t(reply.favourited ? 'action.favourited' : 'action.favourite')"
-            @click="toggleFavourite"
-          >
-            <div
+          <div v-if="isHydrated && currentUser" flex items-center gap-0.5>
+            <button
+              type="button"
+              flex items-center
               :class="reply.favourited
-                ? (useStarFavoriteIcon ? 'i-ri:star-fill' : 'i-ri:heart-3-fill')
-                : (useStarFavoriteIcon ? 'i-ri:star-line' : 'i-ri:heart-3-line')"
-            />
-            <CommonLocalizedNumber
+                ? (useStarFavoriteIcon ? 'text-yellow' : 'text-rose')
+                : (useStarFavoriteIcon ? 'hover:text-yellow' : 'hover:text-rose')"
+              :disabled="favouriting || disabled"
+              :aria-label="$t(reply.favourited ? 'action.favourited' : 'action.favourite')"
+              @click="toggleFavourite"
+            >
+              <div
+                :class="reply.favourited
+                  ? (useStarFavoriteIcon ? 'i-ri:star-fill' : 'i-ri:heart-3-fill')
+                  : (useStarFavoriteIcon ? 'i-ri:star-line' : 'i-ri:heart-3-line')"
+              />
+            </button>
+            <button
               v-if="reply.favouritesCount && !hideFavoriteCount"
-              keypath="action.favourite_count"
-              :count="reply.favouritesCount"
-            />
-          </button>
+              type="button"
+              hover:underline
+              :aria-label="$t('status.favourited_by')"
+              @click="openReactedByDialog(reply.id)"
+            >
+              <CommonLocalizedNumber
+                keypath="action.favourite_count"
+                :count="reply.favouritesCount"
+              />
+            </button>
+          </div>
           <button
             v-if="isOwnReply()"
             type="button"

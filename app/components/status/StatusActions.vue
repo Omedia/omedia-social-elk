@@ -108,7 +108,9 @@ function reply() {
         :active="!!status.favourited"
         :disabled="isLoading.favourited"
         :command="command"
+        text-clickable
         @click="toggleFavourite()"
+        @text-click="openReactedByDialog(status.id)"
       >
         <template v-if="status.favouritesCount && !getPreferences(userSettings, 'hideFavoriteCount')" #text>
           <CommonLocalizedNumber
