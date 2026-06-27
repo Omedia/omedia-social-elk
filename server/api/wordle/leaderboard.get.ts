@@ -121,10 +121,10 @@ function isBetter(a: WordleResult, b: WordleResult): boolean {
  * (handle, puzzle). This collapses a player who was recorded under both their bare
  * and fully-qualified handle into a single leaderboard identity.
  */
-function canonicalizeAndDedupe(results: WordleResult[], server: string): WordleResult[] {
+function canonicalizeAndDedupe(results: WordleResult[]): WordleResult[] {
   const best = new Map<string, WordleResult>()
   for (const raw of results) {
-    const r: WordleResult = { ...raw, acct: canonicalAcct(raw.acct, server) }
+    const r: WordleResult = { ...raw, acct: canonicalAcct(raw.acct) }
     const key = `${r.acct}:${r.puzzleNumber}`
     const current = best.get(key)
     if (!current || isBetter(r, current))
@@ -136,7 +136,6 @@ function canonicalizeAndDedupe(results: WordleResult[], server: string): WordleR
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const puzzleNumber = Number(query.puzzle)
-  const server = useRuntimeConfig(event).public.defaultServer
 
   const [todayResults, allResults] = await Promise.all([
     Number.isInteger(puzzleNumber) ? getResultsForPuzzle(puzzleNumber) : Promise.resolve([]),
@@ -144,7 +143,7 @@ export default defineEventHandler(async (event) => {
   ])
 
   return {
-    today: buildToday(canonicalizeAndDedupe(todayResults, server)),
-    allTime: buildAllTime(canonicalizeAndDedupe(allResults, server)),
+    today: buildToday(canonicalizeAndDedupe(todayResults)),
+    allTime: buildAllTime(canonicalizeAndDedupe(allResults)),
   }
 })
