@@ -85,8 +85,16 @@ function urlBase64ToUint8Array(base64String: string) {
   return outputArray
 }
 
-function getRegistration() {
-  return navigator.serviceWorker.ready
+function getRegistration(): Promise<ServiceWorkerRegistration> {
+  // navigator.serviceWorker.ready never settles when no worker activates (e.g. a
+  // crashed/redundant worker). Cap the wait so a broken service worker surfaces an
+  // error instead of an infinite "Enable push notifications" spinner.
+  return Promise.race([
+    navigator.serviceWorker.ready,
+    new Promise<ServiceWorkerRegistration>((_, reject) => {
+      setTimeout(() => reject(new Error('Service worker not ready')), 10_000)
+    }),
+  ])
 }
 async function getPushSubscription(registration: ServiceWorkerRegistration): Promise<PushManagerSubscriptionInfo> {
   const subscription = await registration.pushManager.getSubscription()
