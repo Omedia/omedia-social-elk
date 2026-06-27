@@ -1,5 +1,6 @@
 import type { H3Event } from 'h3'
 import type { WordleResult } from '../../utils/wordle'
+import { canonicalAcct } from '../../utils/acct'
 import { recordResult } from '../../utils/wordle'
 
 interface ScoreBody {
@@ -59,7 +60,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'Invalid access token' })
     }
 
-    const acct = account.acct || account.username || ''
+    const acct = canonicalAcct(account.acct || account.username || '', server)
     if (!acct)
       throw createError({ statusCode: 401, statusMessage: 'Could not resolve account' })
 
