@@ -20,6 +20,7 @@ const pendingGif = ref<GiphyGif | null>(null)
 const pendingImage = ref<{ file: File, previewUrl: string } | null>(null)
 const uploadingGif = ref(false)
 const mediaError = ref('')
+const replyingTo = ref<mastodon.v1.Status | null>(null)
 
 const hasPendingMedia = computed(() => pendingGif.value !== null || pendingImage.value !== null)
 const isUploadingMedia = computed(() => uploadingGif.value || isUploadingImage.value)
@@ -158,7 +159,7 @@ async function postComment() {
     }
     const newReply = await client.value.v1.statuses.create({
       status: text,
-      inReplyToId: props.status.id,
+      inReplyToId: replyingTo.value?.id ?? props.status.id,
       visibility: props.status.visibility,
       mediaIds: mediaIds.length ? mediaIds : undefined,
     })
@@ -166,6 +167,7 @@ async function postComment() {
     commentText.value = ''
     pendingGif.value = null
     clearImage()
+    replyingTo.value = null
     loaded.value = true
   }
   catch (e) {
@@ -250,6 +252,24 @@ function onPickCustomEmoji(image: { 'data-emoji-id'?: string }) {
     insertAtCursor(`:${shortcode}:`)
 }
 
+const LEADING_MENTION_RE = /^@\S+\s+/
+
+// Reply to a specific comment: target it (so the post threads under it) and
+// prefill the author's mention.
+function startReply(target: mastodon.v1.Status) {
+  replyingTo.value = target
+  commentText.value = `@${target.account.acct} ${commentText.value.replace(LEADING_MENTION_RE, '')}`
+  nextTick(() => {
+    const input = commentInputRef.value
+    input?.focus()
+    input?.setSelectionRange(commentText.value.length, commentText.value.length)
+  })
+}
+
+function cancelReply() {
+  replyingTo.value = null
+}
+
 const el = ref<HTMLElement>()
 onMounted(() => {
   if (!props.status.repliesCount || !el.value)
@@ -288,6 +308,7 @@ onUnmounted(() => {
       <StatusInlineCommentBubble
         :reply="reply"
         @update="updateReply"
+        @reply="startReply"
       />
       <StatusInlineCommentBubble
         v-for="nested in childReplies(reply.id)"
@@ -295,6 +316,7 @@ onUnmounted(() => {
         :reply="nested"
         nested
         @update="updateReply"
+        @reply="startReply"
       />
     </div>
 
@@ -303,8 +325,15 @@ onUnmounted(() => {
       <div v-else w-8 h-8 rounded-full bg-card shrink-0 mt-1 />
       <div
         flex-1 min-w-0 bg-card px-2
-        :class="hasPendingMedia ? 'rounded-3 py-2 flex flex-col gap-2' : 'rounded-full flex gap-1 items-center'"
+        :class="(hasPendingMedia || replyingTo) ? 'rounded-3 py-2 flex flex-col gap-2' : 'rounded-full flex gap-1 items-center'"
       >
+        <div v-if="replyingTo" flex items-center gap-1 text-xs text-secondary w-full>
+          <div i-ri:reply-line shrink-0 />
+          <span truncate>Replying to @{{ replyingTo.account.acct }}</span>
+          <button type="button" ml-auto hover:text-primary aria-label="Cancel reply" @click="cancelReply">
+            <div i-ri:close-line />
+          </button>
+        </div>
         <div
           v-if="pendingGif"
           relative w-fit max-w-40 rounded-2 overflow-hidden

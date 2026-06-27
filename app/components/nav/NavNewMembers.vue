@@ -99,7 +99,7 @@ onMounted(load)
 <style scoped>
 .compact-follow :deep(button) {
   min-width: 72px !important;
-  width: 72px;
+  white-space: nowrap;
   font-size: 0.75rem;
   padding: 0.25rem 0.5rem;
 }

@@ -9,6 +9,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   update: [status: mastodon.v1.Status]
+  reply: [target: mastodon.v1.Status]
 }>()
 
 const { client } = useMasto()
@@ -218,6 +219,15 @@ function timeSince(dateStr: string): string {
               />
             </button>
           </div>
+          <button
+            v-if="isHydrated && currentUser"
+            type="button"
+            hover:text-primary
+            :disabled="disabled"
+            @click="emit('reply', reply)"
+          >
+            Reply
+          </button>
           <button
             v-if="isOwnReply()"
             type="button"
