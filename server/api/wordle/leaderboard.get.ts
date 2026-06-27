@@ -1,4 +1,5 @@
 import type { WordleResult } from '../../utils/wordle'
+import { canonicalAcct } from '../../utils/acct'
 import { getAllResults, getResultsForPuzzle } from '../../utils/wordle'
 
 export interface TodayEntry {
@@ -106,9 +107,36 @@ function buildAllTime(results: WordleResult[]): AllTimeEntry[] {
   })
 }
 
+/** Which of two results for the same (player, puzzle) to keep: win > fewer guesses > earlier. */
+function isBetter(a: WordleResult, b: WordleResult): boolean {
+  if (a.status !== b.status)
+    return a.status === 'won'
+  if (a.status === 'won')
+    return a.guesses < b.guesses
+  return a.ts < b.ts
+}
+
+/**
+ * Normalize each result's handle to its canonical form, then keep one result per
+ * (handle, puzzle). This collapses a player who was recorded under both their bare
+ * and fully-qualified handle into a single leaderboard identity.
+ */
+function canonicalizeAndDedupe(results: WordleResult[], server: string): WordleResult[] {
+  const best = new Map<string, WordleResult>()
+  for (const raw of results) {
+    const r: WordleResult = { ...raw, acct: canonicalAcct(raw.acct, server) }
+    const key = `${r.acct}:${r.puzzleNumber}`
+    const current = best.get(key)
+    if (!current || isBetter(r, current))
+      best.set(key, r)
+  }
+  return [...best.values()]
+}
+
 export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const puzzleNumber = Number(query.puzzle)
+  const server = useRuntimeConfig(event).public.defaultServer
 
   const [todayResults, allResults] = await Promise.all([
     Number.isInteger(puzzleNumber) ? getResultsForPuzzle(puzzleNumber) : Promise.resolve([]),
@@ -116,7 +144,7 @@ export default defineEventHandler(async (event) => {
   ])
 
   return {
-    today: buildToday(todayResults),
-    allTime: buildAllTime(allResults),
+    today: buildToday(canonicalizeAndDedupe(todayResults, server)),
+    allTime: buildAllTime(canonicalizeAndDedupe(allResults, server)),
   }
 })
