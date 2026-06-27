@@ -60,7 +60,7 @@ export default defineEventHandler(async (event) => {
       throw createError({ statusCode: 401, statusMessage: 'Invalid access token' })
     }
 
-    const acct = canonicalAcct(account.acct || account.username || '', server)
+    const acct = canonicalAcct(account.acct || account.username || '')
     if (!acct)
       throw createError({ statusCode: 401, statusMessage: 'Could not resolve account' })
 
