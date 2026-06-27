@@ -23,6 +23,16 @@ export interface AllTimeEntry {
 
 function buildToday(results: WordleResult[]): TodayEntry[] {
   return results
+    .slice()
+    .sort((a, b) => {
+      // Winners first; among winners fewest guesses first; ties broken by the
+      // earliest finish; losers last.
+      if (a.status !== b.status)
+        return a.status === 'won' ? -1 : 1
+      if (a.status === 'won' && a.guesses !== b.guesses)
+        return a.guesses - b.guesses
+      return a.ts - b.ts
+    })
     .map(r => ({
       acct: r.acct,
       displayName: r.displayName,
@@ -30,14 +40,6 @@ function buildToday(results: WordleResult[]): TodayEntry[] {
       status: r.status,
       guesses: r.guesses,
     }))
-    .sort((a, b) => {
-      // Winners first, fewest guesses first; losers after.
-      if (a.status !== b.status)
-        return a.status === 'won' ? -1 : 1
-      if (a.status === 'won')
-        return a.guesses - b.guesses
-      return 0
-    })
 }
 
 function buildAllTime(results: WordleResult[]): AllTimeEntry[] {

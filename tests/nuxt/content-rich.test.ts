@@ -15,7 +15,10 @@ import { contentToVNode } from '~/composables/content-render'
 const SPECIAL_COMMENT_ELEMENT_RE = /<!--[[\]]-->/g
 
 beforeEach(() => {
-  publicServer.value = useRuntimeConfig().public.defaultServer
+  // Pin a fixed host so these rich-content snapshots don't depend on the
+  // deployment's `defaultServer` (this fork customizes it). The committed
+  // snapshots are generated against this value.
+  publicServer.value = 'm.webtoo.ls'
 })
 
 describe('content-rich', () => {
